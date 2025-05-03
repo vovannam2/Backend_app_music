@@ -19,8 +19,6 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService service;
-
-    private final RefreshTokenService refreshTokenService;
     private final EmailService emailService;
 
     @PostMapping("/send")
@@ -48,4 +46,22 @@ public class AuthController {
     }
 
     
+    @PostMapping("/authenticate")
+    public ResponseEntity<?> authenticate(
+            @RequestBody AuthenticationRequest request
+    ) {
+        return ResponseEntity.ok(service.authenticate(request));
+    }
+
+    @PostMapping("/authenticate-oauth")
+    public ResponseEntity<?> authenticateOauth(@RequestBody RegisterRequest request) {
+        return ResponseEntity.ok(service.OAuthLogin(request));
+    }
+
+    @PostMapping("/refreshToken")
+    public ResponseEntity<?> refreshToken(@RequestBody RefreshTokenRequest refreshTokenRequest) {
+        return ResponseEntity.ok(service.refreshToken(refreshTokenRequest));
+    }
 }
+    
+    

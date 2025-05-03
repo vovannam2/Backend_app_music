@@ -1,13 +1,14 @@
 package vn.iostar.service;
 
 import lombok.AllArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import vn.iostar.entity.RefreshToken;
 import vn.iostar.entity.User;
 import vn.iostar.repository.RefreshTokenRepository;
 import vn.iostar.repository.UserRepository;
 
-
+import java.sql.Ref;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;

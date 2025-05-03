@@ -20,6 +20,7 @@ import vn.iostar.entity.*;
 import vn.iostar.model.ResponseMessage;
 import vn.iostar.service.ConfirmationTokenService;
 import vn.iostar.repository.UserRepository;
+import vn.iostar.security.jwt.JWTService;
 import vn.iostar.service.RefreshTokenService;
 import vn.iostar.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -35,7 +36,7 @@ public class AuthService {
 
     private final UserRepository repository;
     private final PasswordEncoder passwordEncoder;
- 
+    private final JWTService jwtService;
 
     @Autowired
     private ConfirmationTokenService confirmationTokenService;
@@ -81,6 +82,7 @@ public class AuthService {
                     user
 
             );
+            
             confirmationTokenService.saveConfirmationToken(confirmationToken);
             emailService.send(request.getEmail(), buildEmailOTP(request.getFirstName() + " " + request.getLastName(), token));
             String message = "Register Successfully! Please Check Email To See OTP!";
@@ -175,9 +177,6 @@ public class AuthService {
                 "</html>";
     }
 
-
-   
-
     private String generateOTP() {
         return new DecimalFormat("000000")
                 .format(new Random().nextInt(999999));
@@ -211,5 +210,125 @@ public class AuthService {
                 .build();
     }
 
-   
+    public AuthenticationResponse authenticate(AuthenticationRequest request) {
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        request.getEmail(),
+                        request.getPassword()
+                )
+        );
+        Optional<User> opt = repository.findByEmail(request.getEmail());
+        if(opt.isEmpty()) {
+            return AuthenticationResponse.builder().error(true).type("wrong").message("Email or Password wrong!").success(false).build();
+        }
+        User user = opt.get();
+        if(user.getProvider() == Provider.GOOGLE) {
+            return AuthenticationResponse.builder().error(true).type("wrong").message("Email or Password wrong!").success(false).build();
+        }
+        if(!user.isActive()) {
+            return AuthenticationResponse.builder()
+                    .error(true)
+                    .success(false)
+                    .email(user.getEmail())
+                    .type("confirm")
+                    .message("Account Not Confirm!")
+                    .build();
+        }
+        if(user.getRole() != request.getRole()) {
+            return AuthenticationResponse.builder().error(true).success(false).message("You Do Not Have Authorize").build();
+        };
+        var jwtToken = jwtService.generateAccessToken(user);
+        var jwtRefreshToken = refreshTokenService.createRefreshToken(user.getEmail());
+        return AuthenticationResponse.builder()
+                .accessToken(jwtToken)
+                .refreshToken(jwtRefreshToken.getToken())
+                .id(user.getIdUser())
+                .nickname(user.getNickname())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .email(user.getEmail())
+                .avatar(user.getAvatar())
+                .gender(user.getGender())
+                .provider(user.getProvider())
+                .error(false)
+                .success(true)
+                .message("Login Successfully!")
+                .build();
+    }
+    
+    
+    public Object refreshToken(RefreshTokenRequest refreshTokenRequest) {
+        return refreshTokenService.findByToken(refreshTokenRequest.getToken())
+        .map(refreshTokenService::verifyExpiration)
+        .map(RefreshToken::getUser)
+        .map(user -> {
+            String accessToken = jwtService.generateAccessToken(user);
+            return RefreshTokenResponse.builder()
+                    .accessToken(accessToken)
+                    .refreshToken(refreshTokenRequest.getToken())
+                    .error(false)
+                    .success(true)
+                    .message("Refresh Token Successfully!")
+                    .build();
+        })
+        .orElseThrow(() -> new RuntimeException(
+                "Refresh Token not in database!"));
+}
+    public AuthenticationResponse OAuthLogin(RegisterRequest request) {
+        Optional<User> optUser = userService.getUserByEmail(request.getEmail());
+        if (optUser.isPresent()) {
+            User user = optUser.get();
+            String provider = String.valueOf(user.getProvider());
+            if (Objects.equals(provider, "DATABASE")) {
+                return AuthenticationResponse.builder().error(true).success(false).message("Email Already Existed!")
+                        .build();
+            }
+            var jwtToken = jwtService.generateAccessToken(user);
+            var jwtRefreshToken = refreshTokenService.createRefreshToken(user.getEmail());
+            return AuthenticationResponse.builder()
+                    .accessToken(jwtToken)
+                    .refreshToken(jwtRefreshToken.getToken())
+                    .id(user.getIdUser())
+                    .firstName(user.getFirstName())
+                    .lastName(user.getLastName())
+                    .email(user.getEmail())
+                    .avatar(user.getAvatar())
+                    .gender(user.getGender())
+                    .provider(user.getProvider())
+                    .error(false)
+                    .success(true)
+                    .message("Login Successfully!")
+                    .build();
+        }
+
+        var user = User.builder()
+                .nickname(request.getNickName())
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .phoneNumber(request.getPhoneNumber())
+                .avatar(request.getAvatar())
+                .role(Role.USER)
+                .provider(Provider.GOOGLE)
+                .isActive(false)
+                .build();
+        repository.save(user);
+        var jwtToken = jwtService.generateAccessToken(user);
+        var jwtRefreshToken = refreshTokenService.createRefreshToken(user.getEmail());
+        return AuthenticationResponse.builder()
+                .accessToken(jwtToken)
+                .refreshToken(jwtRefreshToken.getToken())
+                .id(user.getIdUser())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .email(user.getEmail())
+                .avatar(user.getAvatar())
+                .gender(user.getGender())
+                .provider(user.getProvider())
+                .error(false)
+                .success(true)
+                .message("Login Successfully!")
+                .build();
+    }
 }

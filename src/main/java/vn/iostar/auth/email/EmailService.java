@@ -1,6 +1,4 @@
 package vn.iostar.auth.email;
-
-import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +26,7 @@ public class EmailService implements EmailSender{
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, "utf-8");
             helper.setText(email, true);
             helper.setTo(to);
-            helper.setSubject("[CisnW] Notification");
+            helper.setSubject("[Spotify] Notification");
             mailSender.send(mimeMessage);
         } catch (MessagingException e) {
             LOGGER.error("Failed to send email!", e);

@@ -6,7 +6,11 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class CloudinaryConfig {
     @Bean
+	/*
+	 * public Cloudinary cloudinary() { return new Cloudinary(
+	 * "cloudinary://514747933839148:8Um-dy8v2p4rhuzy2WAsobrHF4g@dv3gj6qre"); }
+	 */
     public Cloudinary cloudinary() {
-        return new Cloudinary("cloudinary://514747933839148:8Um-dy8v2p4rhuzy2WAsobrHF4g@dv3gj6qre");
+        return new Cloudinary("cloudinary://713443736838263:QQhj4bBvTzwmRSItUJ-8z7OXlT8@degizbfnx");
     }
 }
